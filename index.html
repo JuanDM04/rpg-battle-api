@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RPG BATTLE SYSTEM</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --neon-blue: #00d4ff;
+    --neon-purple: #bf00ff;
+    --neon-pink: #ff0080;
+    --dark-bg: #030810;
+    --panel-bg: rgba(0, 10, 30, 0.85);
+    --border-glow: rgba(0, 212, 255, 0.3);
+    --text-primary: #e0f4ff;
+    --text-muted: #4a7a99;
+    --success: #00ff88;
+    --danger: #ff3355;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark-bg);
+    color: var(--text-primary);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 20% 50%, rgba(0,100,255,0.05) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(191,0,255,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    position: relative;
+  }
+  .header-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-blue), var(--neon-purple), transparent);
+    margin-bottom: 1.5rem;
+    animation: pulse-line 3s ease-in-out infinite;
+  }
+  @keyframes pulse-line { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.6rem, 5vw, 2.8rem);
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple), var(--neon-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-transform: uppercase;
+    filter: drop-shadow(0 0 20px rgba(0,212,255,0.4));
+  }
+  .subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    letter-spacing: 0.3em;
+    margin-top: 0.4rem;
+    text-transform: uppercase;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    margin-right: 6px;
+    animation: blink 1.5s ease-in-out infinite;
+    vertical-align: middle;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* Nav tabs */
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-glow);
+    padding-bottom: 0;
+  }
+  .tab-btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.6rem 1.2rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    top: 1px;
+  }
+  .tab-btn:hover { color: var(--neon-blue); }
+  .tab-btn.active {
+    background: var(--panel-bg);
+    border-color: var(--border-glow);
+    border-bottom-color: var(--panel-bg);
+    color: var(--neon-blue);
+    text-shadow: 0 0 10px rgba(0,212,255,0.5);
+  }
+
+  /* Panels */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Panel card */
+  .panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 4px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+  }
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+  }
+  .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--neon-blue);
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-glow);
+  }
+
+  /* Form fields */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+  @media(max-width:600px) { .form-grid, .form-grid-3 { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .field input, .field select {
+    background: rgba(0,20,50,0.8);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 3px;
+    padding: 0.5rem 0.75rem;
+    color: var(--text-primary);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 12px rgba(0,212,255,0.15);
+  }
+  .field select option { background: #050f20; }
+
+  /* Stat sliders */
+  .stat-row { display: flex; flex-direction: column; gap: 4px; }
+  .stat-label-row { display: flex; justify-content: space-between; align-items: center; }
+  .stat-name {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .stat-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--neon-blue);
+    min-width: 30px;
+    text-align: right;
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(0,212,255,0.15);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--neon-blue);
+    box-shadow: 0 0 8px rgba(0,212,255,0.8);
+    cursor: pointer;
+  }
+
+  /* Buttons */
+  .btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.65rem 1.5rem;
+    border: 1px solid;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary {
+    background: rgba(0,212,255,0.1);
+    border-color: var(--neon-blue);
+    color: var(--neon-blue);
+  }
+  .btn-primary:hover {
+    background: rgba(0,212,255,0.2);
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+  }
+  .btn-danger {
+    background: rgba(255,51,85,0.1);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .btn-danger:hover { background: rgba(255,51,85,0.2); }
+  .btn-battle {
+    background: linear-gradient(135deg, rgba(191,0,255,0.15), rgba(255,0,128,0.15));
+    border-color: var(--neon-purple);
+    color: var(--neon-purple);
+    font-size: 0.7rem;
+    padding: 0.8rem 2rem;
+    width: 100%;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+  .btn-battle:hover {
+    box-shadow: 0 0 30px rgba(191,0,255,0.4);
+    background: linear-gradient(135deg, rgba(191,0,255,0.25), rgba(255,0,128,0.25));
+  }
+  .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.55rem; }
+
+  /* Characters grid */
+  .chars-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+  .char-card {
+    background: rgba(0,10,30,0.9);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 4px;
+    padding: 1rem;
+    position: relative;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+  }
+  .char-card:hover { border-color: rgba(0,212,255,0.4); box-shadow: 0 0 20px rgba(0,212,255,0.1); }
+  .char-card.selected { border-color: var(--neon-purple); box-shadow: 0 0 20px rgba(191,0,255,0.2); }
+  .char-card.selected::before {
+    content: 'SELECCIONADO';
+    position: absolute;
+    top: 8px; right: 8px;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.45rem;
+    letter-spacing: 0.1em;
+    color: var(--neon-purple);
+    background: rgba(191,0,255,0.1);
+    border: 1px solid rgba(191,0,255,0.4);
+    padding: 2px 6px;
+    border-radius: 2px;
+  }
+  .char-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .char-meta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+  .stat-bars { display: flex; flex-direction: column; gap: 5px; margin-bottom: 0.75rem; }
+  .mini-stat { display: flex; align-items: center; gap: 8px; }
+  .mini-stat-name {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-muted);
+    width: 30px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .mini-bar-bg { flex: 1; height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; }
+  .mini-bar { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+  .mini-stat-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    color: var(--text-muted);
+    width: 22px;
+    text-align: right;
+  }
+  .char-actions { display: flex; gap: 6px; margin-top: 0.5rem; }
+  .char-id {
+    position: absolute;
+    top: 8px; left: 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    color: rgba(0,212,255,0.3);
+  }
+
+  /* Battle result */
+  .battle-result {
+    display: none;
+    background: rgba(0,5,20,0.95);
+    border: 1px solid var(--neon-purple);
+    border-radius: 4px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .battle-result.show { display: block; animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .battle-result::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--neon-purple), var(--neon-pink));
+  }
+  .winner-banner {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  .winner-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+  .winner-name {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.2rem, 4vw, 2rem);
+    font-weight: 900;
+    background: linear-gradient(90deg, var(--neon-purple), var(--neon-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 15px rgba(191,0,255,0.5));
+    animation: winner-pulse 2s ease-in-out infinite;
+  }
+  @keyframes winner-pulse { 0%,100%{filter:drop-shadow(0 0 15px rgba(191,0,255,0.5))} 50%{filter:drop-shadow(0 0 30px rgba(191,0,255,0.9))} }
+  .vs-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: start; margin-bottom: 1rem; }
+  .vs-divider {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--neon-pink);
+    text-align: center;
+    padding-top: 0.5rem;
+  }
+  .combatant { background: rgba(0,10,30,0.8); border: 1px solid var(--border-glow); border-radius: 3px; padding: 0.75rem; }
+  .combatant-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+  }
+  .combatant-score {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: var(--neon-blue);
+  }
+  .combatant-score span { font-size: 0.6rem; color: var(--text-muted); }
+  .stat-detail { margin-top: 6px; }
+  .stat-detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .stat-detail-row span:last-child { color: var(--neon-blue); }
+  .battle-summary {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+    padding: 0.75rem;
+    background: rgba(0,212,255,0.03);
+    border: 1px solid rgba(0,212,255,0.08);
+    border-radius: 3px;
+    margin-top: 1rem;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem; right: 1.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+    max-width: 320px;
+  }
+  @keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+  .toast.success { background: rgba(0,30,20,0.95); border: 1px solid var(--success); color: var(--success); }
+  .toast.error { background: rgba(30,0,10,0.95); border: 1px solid var(--danger); color: var(--danger); }
+
+  /* Loading */
+  .loading {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid rgba(0,212,255,0.2);
+    border-top-color: var(--neon-blue);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+  }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.3; }
+
+  .section-gap { height: 1rem; }
+
+  /* Edit modal overlay */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #050f20;
+    border: 1px solid var(--neon-purple);
+    border-radius: 4px;
+    padding: 1.5rem;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+  }
+  .modal::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--neon-purple), var(--neon-pink));
+  }
+  .modal-close {
+    position: absolute;
+    top: 10px; right: 12px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+  .modal-close:hover { color: var(--danger); }
+
+  .battle-select-info {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 0.75rem;
+    border: 1px dashed rgba(191,0,255,0.3);
+    border-radius: 3px;
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+  }
+  .selected-fighters {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+  .fighter-slot {
+    flex: 1;
+    text-align: center;
+    padding: 0.75rem;
+    border: 1px solid rgba(191,0,255,0.2);
+    border-radius: 3px;
+    background: rgba(191,0,255,0.05);
+    min-height: 70px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .fighter-slot .slot-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    color: var(--neon-purple);
+    font-weight: 700;
+  }
+  .fighter-slot .slot-empty {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    color: rgba(191,0,255,0.3);
+    letter-spacing: 0.1em;
+  }
+  .vs-text {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    color: var(--neon-pink);
+    font-size: 1rem;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-line"></div>
+    <h1>⚔ RPG Battle System</h1>
+    <div class="subtitle"><span class="status-dot"></span>API conectada en localhost:8000 &nbsp;|&nbsp; v1.0.0</div>
+    <div class="header-line" style="margin-top:1.5rem;margin-bottom:0;"></div>
+  </header>
+
+  <nav class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('personajes')">Personajes</button>
+    <button class="tab-btn" onclick="switchTab('crear')">Crear</button>
+    <button class="tab-btn" onclick="switchTab('batalla')">Batalla</button>
+  </nav>
+
+  <!-- TAB: Personajes -->
+  <div id="tab-personajes" class="tab-panel active">
+    <div class="panel">
+      <div class="panel-title">Registro de Personajes</div>
+      <div id="chars-grid" class="chars-grid">
+        <div class="empty-state"><div class="icon">◈</div>Cargando base de datos...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Crear -->
+  <div id="tab-crear" class="tab-panel">
+    <div class="panel">
+      <div class="panel-title">Datos del Personaje</div>
+      <div class="form-grid" style="margin-bottom:1rem;">
+        <div class="field">
+          <label>Nombre</label>
+          <input type="text" id="c-nombre" placeholder="Ej: Kira Vex"/>
+        </div>
+        <div class="field">
+          <label>Raza</label>
+          <select id="c-raza">
+            <option value="humano">Humano</option>
+            <option value="elfo">Elfo</option>
+            <option value="enano">Enano</option>
+            <option value="mago">Mago</option>
+            <option value="orco">Orco</option>
+            <option value="dragón">Dragón</option>
+            <option value="cyborg">Cyborg</option>
+            <option value="androide">Androide</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Color de Piel</label>
+          <input type="text" id="c-piel" placeholder="Ej: azul neón"/>
+        </div>
+      </div>
+      <div class="panel-title" style="margin-top:1rem;">Estadísticas de Combate</div>
+      <div class="form-grid-3" style="gap:1.5rem;">
+        <div class="stat-row">
+          <div class="stat-label-row">
+            <span class="stat-name">⚔ Fuerza</span>
+            <span class="stat-val" id="v-fuerza">50</span>
+          </div>
+          <input type="range" min="1" max="100" value="50" id="c-fuerza" oninput="document.getElementById('v-fuerza').textContent=this.value"/>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label-row">
+            <span class="stat-name">💨 Agilidad</span>
+            <span class="stat-val" id="v-agilidad">50</span>
+          </div>
+          <input type="range" min="1" max="100" value="50" id="c-agilidad" oninput="document.getElementById('v-agilidad').textContent=this.value"/>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label-row">
+            <span class="stat-name">✦ Magia</span>
+            <span class="stat-val" id="v-magia">50</span>
+          </div>
+          <input type="range" min="1" max="100" value="50" id="c-magia" oninput="document.getElementById('v-magia').textContent=this.value"/>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label-row">
+            <span class="stat-name">◈ Conocimiento</span>
+            <span class="stat-val" id="v-conocimiento">50</span>
+          </div>
+          <input type="range" min="1" max="100" value="50" id="c-conocimiento" oninput="document.getElementById('v-conocimiento').textContent=this.value"/>
+        </div>
+      </div>
+      <div style="margin-top:1.5rem;display:flex;gap:0.75rem;">
+        <button class="btn btn-primary" onclick="crearPersonaje()">◈ Crear Personaje</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Batalla -->
+  <div id="tab-batalla" class="tab-panel">
+    <div class="panel">
+      <div class="panel-title">Selección de Combatientes</div>
+      <div class="battle-select-info">Haz clic en dos personajes de la lista para enfrentarlos</div>
+      <div class="selected-fighters">
+        <div class="fighter-slot" id="slot-1">
+          <div class="slot-empty">LUCHADOR 1</div>
+        </div>
+        <div class="vs-text">VS</div>
+        <div class="fighter-slot" id="slot-2">
+          <div class="slot-empty">LUCHADOR 2</div>
+        </div>
+      </div>
+      <div id="battle-chars-grid" class="chars-grid">
+        <div class="empty-state"><div class="icon">◈</div>Cargando personajes...</div>
+      </div>
+      <button class="btn btn-battle" onclick="simularBatalla()">⚡ INICIAR BATALLA</button>
+    </div>
+    <div class="battle-result" id="battle-result"></div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="panel-title" style="margin-bottom:1rem;">Modificar Personaje</div>
+    <input type="hidden" id="e-id"/>
+    <div class="form-grid" style="margin-bottom:1rem;">
+      <div class="field">
+        <label>Nombre</label>
+        <input type="text" id="e-nombre"/>
+      </div>
+      <div class="field">
+        <label>Raza</label>
+        <select id="e-raza">
+          <option value="humano">Humano</option>
+          <option value="elfo">Elfo</option>
+          <option value="enano">Enano</option>
+          <option value="mago">Mago</option>
+          <option value="orco">Orco</option>
+          <option value="dragón">Dragón</option>
+          <option value="cyborg">Cyborg</option>
+          <option value="androide">Androide</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Color de Piel</label>
+        <input type="text" id="e-piel"/>
+      </div>
+    </div>
+    <div class="form-grid-3" style="gap:1rem;margin-bottom:1.5rem;">
+      <div class="stat-row">
+        <div class="stat-label-row"><span class="stat-name">⚔ Fuerza</span><span class="stat-val" id="ev-fuerza">50</span></div>
+        <input type="range" min="1" max="100" id="e-fuerza" oninput="document.getElementById('ev-fuerza').textContent=this.value"/>
+      </div>
+      <div class="stat-row">
+        <div class="stat-label-row"><span class="stat-name">💨 Agilidad</span><span class="stat-val" id="ev-agilidad">50</span></div>
+        <input type="range" min="1" max="100" id="e-agilidad" oninput="document.getElementById('ev-agilidad').textContent=this.value"/>
+      </div>
+      <div class="stat-row">
+        <div class="stat-label-row"><span class="stat-name">✦ Magia</span><span class="stat-val" id="ev-magia">50</span></div>
+        <input type="range" min="1" max="100" id="e-magia" oninput="document.getElementById('ev-magia').textContent=this.value"/>
+      </div>
+      <div class="stat-row">
+        <div class="stat-label-row"><span class="stat-name">◈ Conocimiento</span><span class="stat-val" id="ev-conocimiento">50</span></div>
+        <input type="range" min="1" max="100" id="e-conocimiento" oninput="document.getElementById('ev-conocimiento').textContent=this.value"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.75rem;">
+      <button class="btn btn-primary" onclick="guardarEdicion()">◈ Guardar Cambios</button>
+      <button class="btn btn-danger" onclick="confirmarEliminar()">✕ Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://127.0.0.1:8000';
+let allChars = [];
+let battleSelection = [];
+
+const statColors = {
+  fuerza:       '#ff4466',
+  agilidad:     '#00ff88',
+  magia:        '#bf00ff',
+  conocimiento: '#00d4ff'
+};
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'personajes' || name === 'batalla') loadChars();
+}
+
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function charCard(c, forBattle=false) {
+  const isSelected = forBattle && battleSelection.find(s => s.id === c.id);
+  return `
+  <div class="char-card${isSelected?' selected':''}" onclick="${forBattle?`toggleBattleSelect(${c.id})`:`openEditModal(${c.id})`}" id="card-${forBattle?'b':''}${c.id}">
+    <div class="char-id">#${String(c.id).padStart(3,'0')}</div>
+    <div style="padding-top:0.3rem;">
+      <div class="char-name">${c.nombre.toUpperCase()}</div>
+      <div class="char-meta">${c.raza} &nbsp;|&nbsp; Piel: ${c.color_piel}</div>
+    </div>
+    <div class="stat-bars">
+      ${['fuerza','agilidad','magia','conocimiento'].map(s => `
+      <div class="mini-stat">
+        <span class="mini-stat-name">${s.substring(0,3)}</span>
+        <div class="mini-bar-bg"><div class="mini-bar" style="width:${c[s]}%;background:${statColors[s]};"></div></div>
+        <span class="mini-stat-num">${c[s]}</span>
+      </div>`).join('')}
+    </div>
+    ${!forBattle ? `<div class="char-actions">
+      <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openEditModal(${c.id})">✎ Editar</button>
+    </div>` : ''}
+  </div>`;
+}
+
+async function loadChars() {
+  try {
+    const res = await fetch(`${API}/personajes`);
+    allChars = await res.json();
+    renderChars();
+    renderBattleChars();
+  } catch(e) {
+    document.getElementById('chars-grid').innerHTML = `<div class="empty-state"><div class="icon">⚠</div>No se pudo conectar con la API.<br>Asegúrate de que está corriendo en localhost:8000</div>`;
+  }
+}
+
+function renderChars() {
+  const grid = document.getElementById('chars-grid');
+  if (!allChars.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="icon">◈</div>No hay personajes aún.<br>Ve a la pestaña CREAR para añadir uno.</div>`;
+    return;
+  }
+  grid.innerHTML = allChars.map(c => charCard(c, false)).join('');
+}
+
+function renderBattleChars() {
+  const grid = document.getElementById('battle-chars-grid');
+  if (!allChars.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="icon">◈</div>No hay personajes disponibles.</div>`;
+    return;
+  }
+  grid.innerHTML = allChars.map(c => charCard(c, true)).join('');
+  updateSlots();
+}
+
+function toggleBattleSelect(id) {
+  const char = allChars.find(c => c.id === id);
+  const idx = battleSelection.findIndex(c => c.id === id);
+  if (idx >= 0) {
+    battleSelection.splice(idx, 1);
+  } else {
+    if (battleSelection.length >= 2) battleSelection.shift();
+    battleSelection.push(char);
+  }
+  renderBattleChars();
+}
+
+function updateSlots() {
+  const s1 = document.getElementById('slot-1');
+  const s2 = document.getElementById('slot-2');
+  s1.innerHTML = battleSelection[0]
+    ? `<div class="slot-name">${battleSelection[0].nombre.toUpperCase()}</div><div style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:var(--text-muted);margin-top:4px;">${battleSelection[0].raza}</div>`
+    : `<div class="slot-empty">LUCHADOR 1</div>`;
+  s2.innerHTML = battleSelection[1]
+    ? `<div class="slot-name">${battleSelection[1].nombre.toUpperCase()}</div><div style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:var(--text-muted);margin-top:4px;">${battleSelection[1].raza}</div>`
+    : `<div class="slot-empty">LUCHADOR 2</div>`;
+}
+
+async function crearPersonaje() {
+  const nombre = document.getElementById('c-nombre').value.trim();
+  const raza   = document.getElementById('c-raza').value;
+  const piel   = document.getElementById('c-piel').value.trim();
+  if (!nombre || !piel) { showToast('Completa nombre y color de piel', 'error'); return; }
+  const data = {
+    nombre, raza, color_piel: piel,
+    fuerza:       +document.getElementById('c-fuerza').value,
+    agilidad:     +document.getElementById('c-agilidad').value,
+    magia:        +document.getElementById('c-magia').value,
+    conocimiento: +document.getElementById('c-conocimiento').value,
+  };
+  try {
+    const res = await fetch(`${API}/personajes`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    if (res.ok) {
+      showToast(`Personaje "${nombre}" creado`, 'success');
+      document.getElementById('c-nombre').value = '';
+      document.getElementById('c-piel').value = '';
+      loadChars();
+      switchTab('personajes');
+      document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      document.querySelectorAll('.tab-btn')[1].classList.remove('active');
+    } else { showToast('Error al crear personaje', 'error'); }
+  } catch(e) { showToast('No se pudo conectar con la API', 'error'); }
+}
+
+function openEditModal(id) {
+  const c = allChars.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('e-id').value = c.id;
+  document.getElementById('e-nombre').value = c.nombre;
+  document.getElementById('e-raza').value = c.raza;
+  document.getElementById('e-piel').value = c.color_piel;
+  ['fuerza','agilidad','magia','conocimiento'].forEach(s => {
+    document.getElementById('e-'+s).value = c[s];
+    document.getElementById('ev-'+s).textContent = c[s];
+  });
+  document.getElementById('edit-modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('show');
+}
+
+async function guardarEdicion() {
+  const id = document.getElementById('e-id').value;
+  const data = {
+    nombre:       document.getElementById('e-nombre').value.trim(),
+    raza:         document.getElementById('e-raza').value,
+    color_piel:   document.getElementById('e-piel').value.trim(),
+    fuerza:       +document.getElementById('e-fuerza').value,
+    agilidad:     +document.getElementById('e-agilidad').value,
+    magia:        +document.getElementById('e-magia').value,
+    conocimiento: +document.getElementById('e-conocimiento').value,
+  };
+  try {
+    const res = await fetch(`${API}/personajes/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    if (res.ok) { showToast('Personaje actualizado', 'success'); closeModal(); loadChars(); }
+    else { showToast('Error al actualizar', 'error'); }
+  } catch(e) { showToast('No se pudo conectar con la API', 'error'); }
+}
+
+async function confirmarEliminar() {
+  const id = document.getElementById('e-id').value;
+  const nombre = document.getElementById('e-nombre').value;
+  if (!confirm(`¿Eliminar a "${nombre}"? Esta acción no se puede deshacer.`)) return;
+  try {
+    const res = await fetch(`${API}/personajes/${id}`, { method:'DELETE' });
+    if (res.status === 204) { showToast(`"${nombre}" eliminado`, 'success'); closeModal(); loadChars(); }
+    else { showToast('Error al eliminar', 'error'); }
+  } catch(e) { showToast('No se pudo conectar con la API', 'error'); }
+}
+
+async function simularBatalla() {
+  if (battleSelection.length < 2) { showToast('Selecciona 2 personajes para batallar', 'error'); return; }
+  const resultDiv = document.getElementById('battle-result');
+  resultDiv.classList.remove('show');
+  resultDiv.innerHTML = `<div style="text-align:center;padding:2rem;"><span class="loading"></span> <span style="font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:var(--text-muted);"> CALCULANDO BATALLA...</span></div>`;
+  resultDiv.classList.add('show');
+  try {
+    const res = await fetch(`${API}/batalla`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ id_personaje_1: battleSelection[0].id, id_personaje_2: battleSelection[1].id })
+    });
+    const r = await res.json();
+    const p1 = r.puntaje_personaje_1;
+    const p2 = r.puntaje_personaje_2;
+    resultDiv.innerHTML = `
+      <div class="winner-banner">
+        <div class="winner-label">⚡ GANADOR DE LA BATALLA ⚡</div>
+        <div class="winner-name">${r.ganador.toUpperCase()}</div>
+      </div>
+      <div class="vs-grid">
+        <div class="combatant">
+          <div class="combatant-name">${p1.nombre.toUpperCase()}</div>
+          <div class="combatant-score">${p1.poder_efectivo.toFixed(1)}<span> pts</span></div>
+          <div class="stat-detail">
+            <div class="stat-detail-row"><span>Daño físico</span><span>${p1.desglose.daño_fisico}</span></div>
+            <div class="stat-detail-row"><span>Ataque mágico</span><span>${p1.desglose.ataque_magico}</span></div>
+            <div class="stat-detail-row"><span>Evasión</span><span>${p1.desglose.evasion}</span></div>
+            <div class="stat-detail-row"><span>Bonus estrategia</span><span>${p1.desglose.bonus_estrategia}</span></div>
+          </div>
+        </div>
+        <div class="vs-divider">VS</div>
+        <div class="combatant">
+          <div class="combatant-name">${p2.nombre.toUpperCase()}</div>
+          <div class="combatant-score">${p2.poder_efectivo.toFixed(1)}<span> pts</span></div>
+          <div class="stat-detail">
+            <div class="stat-detail-row"><span>Daño físico</span><span>${p2.desglose.daño_fisico}</span></div>
+            <div class="stat-detail-row"><span>Ataque mágico</span><span>${p2.desglose.ataque_magico}</span></div>
+            <div class="stat-detail-row"><span>Evasión</span><span>${p2.desglose.evasion}</span></div>
+            <div class="stat-detail-row"><span>Bonus estrategia</span><span>${p2.desglose.bonus_estrategia}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="battle-summary">// RESUMEN: ${r.resumen}</div>`;
+  } catch(e) { resultDiv.innerHTML = `<div class="empty-state"><div class="icon">⚠</div>Error al conectar con la API</div>`; }
+}
+
+loadChars();
+</script>
+</body>
+</html>
